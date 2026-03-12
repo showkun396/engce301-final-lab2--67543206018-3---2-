@@ -31,7 +31,7 @@ This repository implements a microservices architecture using an API Gateway (`n
 All backend services share the same `JWT_SECRET` in environment variables.
 
 ## Cloud Deployment (Railway) URLs
-- Auth Service: `[YOUR_AUTH_URL]`
-- Task Service: `[YOUR_TASK_URL]`
-- User Service: `[YOUR_USER_URL]`
-- Nginx Gateway: `[YOUR_NGINX_URL]`
+- Auth Service: `[(https://auth-service-production.up.railway.app)]`
+- Task Service: `[(https://task-service-production.up.railway.app)]`
+- User Service: `[(https://log-service-production.up.railway.app)]`
+- Nginx Gateway: `[(https://nginx-production.up.railway.app)]`
