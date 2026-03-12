@@ -257,3 +257,5 @@ Body
 - Task Service: `[(https://task-service-production.up.railway.app)]`
 - User Service: `[(https://log-service-production.up.railway.app)]`
 - Nginx Gateway: `[(https://nginx-production.up.railway.app)]`
+
+#ทำเสร็จแล้วแต่แคปภาพใส่ไม่ทันบน DBeaver , reaway
