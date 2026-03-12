@@ -1,0 +1,127 @@
+services:
+
+  # ── PostgreSQL Databases ──────────────────────────────────────────────────
+  postgres-auth:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+      - ./auth-service/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks: [taskboard-net]
+
+  postgres-task:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_task_data:/var/lib/postgresql/data
+      - ./task-service/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks: [taskboard-net]
+
+  postgres-user:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+      - ./user-service/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks: [taskboard-net]
+
+  # ── Services ─────────────────────────────────────────────────────────────
+  auth-service:
+    build: ./auth-service
+    environment:
+      JWT_SECRET:    myfinalexamsecret
+      DB_HOST:       postgres-auth
+      DB_PORT:       5432
+      DB_NAME:       ${POSTGRES_DB}
+      DB_USER:       ${POSTGRES_USER}
+      DB_PASSWORD:   ${POSTGRES_PASSWORD}
+      JWT_EXPIRES:   ${JWT_EXPIRES}
+      PORT:          3001
+    depends_on:
+      postgres-auth: { condition: service_healthy }
+    networks: [taskboard-net]
+    restart: unless-stopped
+
+  task-service:
+    build: ./task-service
+    environment:
+      JWT_SECRET:    myfinalexamsecret
+      DB_HOST:       postgres-task
+      DB_PORT:       5432
+      DB_NAME:       ${POSTGRES_DB}
+      DB_USER:       ${POSTGRES_USER}
+      DB_PASSWORD:   ${POSTGRES_PASSWORD}
+      PORT:          3002
+    depends_on:
+      postgres-task: { condition: service_healthy }
+      auth-service:  { condition: service_started }
+    networks: [taskboard-net]
+    restart: unless-stopped
+
+  user-service:
+    build: ./user-service
+    environment:
+      JWT_SECRET:    myfinalexamsecret
+      DB_HOST:       postgres-user
+      DB_PORT:       5432
+      DB_NAME:       ${POSTGRES_DB}
+      DB_USER:       ${POSTGRES_USER}
+      DB_PASSWORD:   ${POSTGRES_PASSWORD}
+      PORT:          3004
+    depends_on:
+      postgres-user: { condition: service_healthy }
+      auth-service:  { condition: service_started }
+    networks: [taskboard-net]
+    restart: unless-stopped
+
+  # ── Frontend (Static) ────────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    networks: [taskboard-net]
+
+  # ── Nginx (API Gateway + TLS) ────────────────────────────────────────────
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - auth-service
+      - task-service
+      - user-service
+      - frontend
+    networks: [taskboard-net]
+    restart: unless-stopped
+
+volumes:
+  postgres_auth_data: 
+  postgres_task_data: 
+  postgres_user_data: 
+
+networks:
+  taskboard-net:
+    driver: bridge
